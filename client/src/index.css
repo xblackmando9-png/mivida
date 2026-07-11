@@ -899,13 +899,28 @@ h1, h2, h3, h4, h5, h6 {
     padding: 1rem 1.25rem;
   }
 
+  /* ✅ Make ALL tables scrollable on tablet */
+  .table-responsive-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+  }
+
   table {
-    font-size: 0.8rem;
+    font-size: 0.82rem;
+    min-width: 520px;
   }
 
   table th,
   table td {
     padding: 0.75rem 0.75rem !important;
+    white-space: nowrap;
+  }
+
+  /* Stats grid: 2 columns on tablet */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -914,7 +929,7 @@ h1, h2, h3, h4, h5, h6 {
 ===================== */
 @media (max-width: 640px) {
   .main-content {
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .top-header {
@@ -938,6 +953,16 @@ h1, h2, h3, h4, h5, h6 {
 
   .section-header h3 {
     font-size: 1rem;
+  }
+
+  /* Stats grid: single column */
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
   }
 
   /* Search + Add button stack vertically */
@@ -983,7 +1008,7 @@ h1, h2, h3, h4, h5, h6 {
     height: 80px;
   }
 
-  /* Modal fills screen on mobile */
+  /* Modal fills screen from bottom on mobile */
   .modal-overlay {
     align-items: flex-end;
     padding: 0;
@@ -1012,13 +1037,33 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: column;
   }
 
-  /* Cars table: make scrollable */
-  .main-content > div > div[style*='border-radius: 16px'] {
+  /* ✅ Tables: horizontally scrollable box */
+  .table-responsive-wrapper {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    /* Subtle scroll shadow hint */
+    background:
+      linear-gradient(to right, white 30%, rgba(255,255,255,0)),
+      linear-gradient(to right, rgba(255,255,255,0), white 70%) 0 100%,
+      radial-gradient(farthest-side at 0% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0)) 0 50%,
+      radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0)) 100% 50%;
+    background-repeat: no-repeat;
+    background-color: white;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
   }
 
   table {
-    min-width: 480px;
+    min-width: 520px;
+    font-size: 0.8rem;
+  }
+
+  table th,
+  table td {
+    padding: 0.65rem 0.75rem !important;
+    white-space: nowrap;
   }
 
   .toast-container {
@@ -1031,9 +1076,14 @@ h1, h2, h3, h4, h5, h6 {
     width: 100%;
   }
 
-  /* Sidebar overlay backdrop on mobile */
+  /* Sidebar: narrower on mobile */
   .sidebar {
     width: 260px;
+  }
+
+  /* Parcel cards: single column */
+  .residents-grid[style] {
+    grid-template-columns: 1fr !important;
   }
 }
 

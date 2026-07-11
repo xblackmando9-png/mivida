@@ -558,7 +558,7 @@ function App() {
               </div>
             </div>
             
-            <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+            <div className="table-responsive-wrapper" style={{ backgroundColor: 'white' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
@@ -652,31 +652,33 @@ function App() {
                   </button>
                 </div>
                 
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
-                      <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>الاسم</th>
-                      <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>رقم الشقة</th>
-                      <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>رقم السيارة</th>
-                      <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>الأولاد</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {residents.filter(r => r.parcel === selectedParcel.name).map((resident) => (
-                      <tr key={resident._id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <td style={{ padding: '1.2rem 1.5rem', fontWeight: '700' }}>{resident.name}</td>
-                        <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-muted)' }}>{resident.apartmentNumber}</td>
-                        <td style={{ padding: '1.2rem 1.5rem' }}>{resident.carNumber || '-'}</td>
-                        <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-muted)' }}>{resident.children?.join(', ') || '-'}</td>
+                <div className="table-responsive-wrapper">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
+                        <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>الاسم</th>
+                        <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>رقم الشقة</th>
+                        <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>رقم السيارة</th>
+                        <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>الأولاد</th>
                       </tr>
-                    ))}
-                    {residents.filter(r => r.parcel === selectedParcel.name).length === 0 && (
-                      <tr>
-                        <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>لا يوجد سكان في هذا البارسيل حالياً</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {residents.filter(r => r.parcel === selectedParcel.name).map((resident) => (
+                        <tr key={resident._id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '1.2rem 1.5rem', fontWeight: '700' }}>{resident.name}</td>
+                          <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-muted)' }}>{resident.apartmentNumber}</td>
+                          <td style={{ padding: '1.2rem 1.5rem' }}>{resident.carNumber || '-'}</td>
+                          <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-muted)' }}>{resident.children?.join(', ') || '-'}</td>
+                        </tr>
+                      ))}
+                      {residents.filter(r => r.parcel === selectedParcel.name).length === 0 && (
+                        <tr>
+                          <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>لا يوجد سكان في هذا البارسيل حالياً</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
               <div className="residents-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
