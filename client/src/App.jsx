@@ -14,7 +14,7 @@ import {
   Heart
 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 
 function App() {
   const [activeTab, setActiveTab] = useState('residents');
@@ -170,6 +170,79 @@ function App() {
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    // Apply premium styles to cells
+    for (const cellRef in worksheet) {
+      if (cellRef[0] === '!') continue; // Skip metadata
+      const cell = worksheet[cellRef];
+      const isHeader = cellRef.replace(/[A-Z]/g, '') === '1';
+
+      if (isHeader) {
+        cell.s = {
+          fill: {
+            fgColor: { rgb: "1e3a8a" } // Dark blue header (#1E3A8A)
+          },
+          font: {
+            name: "Arial",
+            sz: 12,
+            bold: true,
+            color: { rgb: "FFFFFF" } // White text
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center"
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "cbd5e1" } },
+            bottom: { style: "medium", color: { rgb: "1e3a8a" } },
+            left: { style: "thin", color: { rgb: "cbd5e1" } },
+            right: { style: "thin", color: { rgb: "cbd5e1" } }
+          }
+        };
+      } else {
+        cell.s = {
+          font: {
+            name: "Arial",
+            sz: 10
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center"
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "f1f5f9" } },
+            bottom: { style: "thin", color: { rgb: "f1f5f9" } },
+            left: { style: "thin", color: { rgb: "f1f5f9" } },
+            right: { style: "thin", color: { rgb: "f1f5f9" } }
+          }
+        };
+      }
+    }
+
+    // Auto-fit column widths based on maximum text length
+    const colWidths = [];
+    const keys = Object.keys(dataToExport[0] || {});
+    keys.forEach((key) => {
+      let maxLen = key.toString().length;
+      dataToExport.forEach(row => {
+        const val = row[key];
+        if (val !== undefined && val !== null) {
+          const len = val.toString().length;
+          if (len > maxLen) {
+            maxLen = len;
+          }
+        }
+      });
+      // Pad Arabic text width (since characters are wider than standard characters)
+      colWidths.push({ wch: Math.max(maxLen * 1.8 + 6, 12) });
+    });
+    worksheet['!cols'] = colWidths;
+
+    // Set row height for headers
+    worksheet['!rows'] = [
+      { hpt: 28 } // Header row height
+    ];
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, parcel.name.slice(0, 31)); // sheet names must be <= 31 chars
 
