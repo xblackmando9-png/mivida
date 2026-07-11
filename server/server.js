@@ -67,3 +67,6 @@ app.listen(PORT, () => {
   console.log(`السيرفر يعمل الآن على المنفذ: http://localhost:${PORT}`);
 });
 
+module.exports = app;
+
+
