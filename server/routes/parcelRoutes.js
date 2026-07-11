@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Parcel = require('../models/Parcel');
+const Resident = require('../models/Resident');
 
 // @route   GET /api/parcels
 // @desc    Get all parcels
@@ -40,7 +41,7 @@ router.post('/', async (req, res) => {
 });
 
 // @route   DELETE /api/parcels/:id
-// @desc    Delete a parcel
+// @desc    Delete a parcel and clear it from all linked residents
 router.delete('/:id', async (req, res) => {
   try {
     const parcel = await Parcel.findById(req.params.id);
@@ -48,11 +49,48 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'البارسيل غير موجود' });
     }
 
+    // Clear the parcel field on all residents linked to this parcel
+    await Resident.updateMany(
+      { parcel: parcel.name },
+      { $set: { parcel: '' } }
+    );
+
     await Parcel.findByIdAndDelete(req.params.id);
-    res.json({ message: 'تم حذف البارسيل بنجاح' });
+    res.json({ message: 'تم حذف البارسيل وإلغاء ارتباطه بالسكان بنجاح' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'حدث خطأ أثناء حذف البارسيل' });
+  }
+});
+
+// @route   PUT /api/parcels/:id
+// @desc    Rename a parcel and update all linked residents
+router.put('/:id', async (req, res) => {
+  try {
+    const parcel = await Parcel.findById(req.params.id);
+    if (!parcel) {
+      return res.status(404).json({ message: 'البارسيل غير موجود' });
+    }
+
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'الاسم الجديد مطلوب' });
+    }
+
+    const oldName = parcel.name;
+    parcel.name = name.trim();
+    await parcel.save();
+
+    // Update all residents that had the old parcel name
+    await Resident.updateMany(
+      { parcel: oldName },
+      { $set: { parcel: name.trim() } }
+    );
+
+    res.json(parcel);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'حدث خطأ أثناء تعديل البارسيل' });
   }
 });
 

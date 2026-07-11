@@ -7,15 +7,11 @@ import {
   Car, 
   Home, 
   Trash2, 
-  Phone, 
-  Heart, 
-  Shield, 
-  Info,
   Menu,
-  CheckCircle2,
-  AlertTriangle,
   Search,
-  Pencil
+  Pencil,
+  MapPin,
+  Heart
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
@@ -35,6 +31,7 @@ function App() {
   const [newParcelName, setNewParcelName] = useState('');
   const [selectedParcel, setSelectedParcel] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [viewCarPhoto, setViewCarPhoto] = useState(null); // URL of car photo to view fullscreen
 
   // Filter residents based on search query
   const filteredResidents = residents.filter((resident) => {
@@ -106,6 +103,37 @@ function App() {
       showToast('خطأ بالاتصال', 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteParcel = async (parcel, e) => {
+    e.stopPropagation(); // prevent card click
+    const count = residents.filter(r => r.parcel === parcel.name).length;
+    const result = await Swal.fire({
+      title: `حذف بارسيل: ${parcel.name}`,
+      html: count > 0
+        ? `يوجد <strong>${count}</strong> ساكن مرتبط بهذا البارسيل. سيتم إلغاء ارتباطهم به تلقائياً.`
+        : 'هل أنت متأكد من حذف هذا البارسيل؟',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'نعم، احذف',
+      cancelButtonText: 'إلغاء'
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const res = await fetch(`/api/parcels/${parcel._id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('تم حذف البارسيل بنجاح');
+        fetchParcels();
+        fetchResidents(); // refresh to clear old parcel refs
+      } else {
+        const errData = await res.json();
+        showToast(errData.message || 'فشل الحذف', 'error');
+      }
+    } catch {
+      showToast('خطأ في الاتصال', 'error');
     }
   };
 
@@ -394,7 +422,12 @@ function App() {
                         {resident.carPhoto && (
                           <div style={{ marginTop: '0.5rem' }}>
                             <span className="detail-label" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px' }}>صورة السيارة المعتمدة:</span>
-                            <div className="car-photo-preview-card">
+                            <div 
+                              className="car-photo-preview-card"
+                              onClick={() => setViewCarPhoto(resident.carPhoto)}
+                              style={{ cursor: 'zoom-in', position: 'relative' }}
+                              title="اضغط لعرض الصورة كاملة"
+                            >
                               <img 
                                 src={resident.carPhoto} 
                                 alt="Car Photo" 
@@ -402,6 +435,15 @@ function App() {
                                   e.target.style.display = 'none';
                                 }}
                               />
+                              <div style={{
+                                position: 'absolute', bottom: 6, left: 6,
+                                backgroundColor: 'rgba(0,0,0,0.55)',
+                                color: 'white', fontSize: '0.72rem',
+                                padding: '2px 8px', borderRadius: '20px',
+                                backdropFilter: 'blur(4px)'
+                              }}>
+                                🔍 عرض كاملة
+                              </div>
                             </div>
                           </div>
                         )}
@@ -561,14 +603,36 @@ function App() {
                   <div 
                     key={parcel._id} 
                     className="stat-card" 
-                    style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem' }}
+                    style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', position: 'relative' }}
                     onClick={() => setSelectedParcel(parcel)}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                      <div className="stat-icon" style={{ backgroundColor: '#fef3c7', color: '#d97706', width: '40px', height: '40px' }}>
-                        <Home size={20} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div className="stat-icon" style={{ backgroundColor: '#fef3c7', color: '#d97706', width: '40px', height: '40px' }}>
+                          <Home size={20} />
+                        </div>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{parcel.name}</h3>
                       </div>
-                      <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{parcel.name}</h3>
+                      <button
+                        onClick={(e) => handleDeleteParcel(parcel, e)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--danger-color)',
+                          cursor: 'pointer',
+                          padding: '6px',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="حذف البارسيل"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
                       عدد السكان: {residents.filter(r => r.parcel === parcel.name).length}
@@ -636,6 +700,84 @@ function App() {
                 {isSaving ? 'جاري الحفظ...' : 'حفظ البارسيل'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Car Photo Lightbox Modal ===== */}
+      {viewCarPhoto && (
+        <div
+          onClick={() => setViewCarPhoto(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            backdropFilter: 'blur(8px)',
+            animation: 'fadeIn 0.2s ease'
+          }}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setViewCarPhoto(null)}
+            style={{
+              position: 'absolute',
+              top: '1.2rem',
+              right: '1.2rem',
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '44px',
+              height: '44px',
+              cursor: 'pointer',
+              color: 'white',
+              fontSize: '1.4rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backdropFilter: 'blur(4px)',
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+            title="إغلاق"
+          >
+            ✕
+          </button>
+
+          {/* Image */}
+          <img
+            src={viewCarPhoto}
+            alt="صورة السيارة المعتمدة"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '85vh',
+              borderRadius: '16px',
+              boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
+              objectFit: 'contain',
+              border: '2px solid rgba(255,255,255,0.15)'
+            }}
+          />
+
+          {/* Label */}
+          <div style={{
+            position: 'absolute',
+            bottom: '1.5rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: 'rgba(255,255,255,0.75)',
+            fontSize: '0.9rem',
+            background: 'rgba(0,0,0,0.4)',
+            padding: '0.4rem 1.2rem',
+            borderRadius: '20px',
+            backdropFilter: 'blur(4px)'
+          }}>
+            🚗 صورة السيارة المعتمدة — اضغط خارج الصورة للإغلاق
           </div>
         </div>
       )}

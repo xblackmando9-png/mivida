@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Plus, Trash } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
   const [name, setName] = useState(residentToEdit ? residentToEdit.name : '');
@@ -71,7 +72,13 @@ function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
     e.preventDefault();
 
     if (!name.trim() || !apartmentNumber.trim()) {
-      alert('الرجاء إدخال الحقول المطلوبة (الاسم ورقم الشقة)');
+      Swal.fire({
+        icon: 'warning',
+        title: 'حقول مطلوبة',
+        text: 'الرجاء إدخال الاسم الكامل ورقم الشقة على الأقل.',
+        confirmButtonText: 'حسناً',
+        confirmButtonColor: '#3b82f6'
+      });
       return;
     }
 
