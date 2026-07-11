@@ -3,9 +3,9 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 
 cloudinary.config({
-  cloud_name: 'rd0u96zt',
-  api_key: '416226374972521',
-  api_secret: 'jDC8UAKFF8unuGdTJ2ioxY-UFh8'
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'rd0u96zt',
+  api_key: process.env.CLOUDINARY_API_KEY || '416226374972521',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'jDC8UAKFF8unuGdTJ2ioxY-UFh8'
 });
 
 // Storage for personal photos
