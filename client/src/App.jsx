@@ -8,6 +8,7 @@ import {
   Home, 
   Trash2, 
   Menu,
+  X,
   Search,
   Pencil,
   MapPin,
@@ -338,8 +339,12 @@ function App() {
 
       {/* Mobile Header Toggle */}
       <div className="mobile-header">
-        <button className="sidebar-toggle-btn" onClick={() => setIsSidebarOpen(true)}>
-          <Menu size={24} />
+        <button 
+          className="sidebar-toggle-btn" 
+          onClick={() => setIsSidebarOpen(prev => !prev)}
+          aria-label={isSidebarOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+        >
+          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
         <span className="sidebar-logo-text" style={{ fontSize: '1.1rem' }}>ميفيدا Hegazy</span>
         <div style={{ width: 24 }} /> {/* Spacer */}

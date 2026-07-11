@@ -785,6 +785,49 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateX(-4px);
 }
 
+/* =====================
+   TABLE RESPONSIVE WRAPPER (All screens)
+===================== */
+.table-responsive-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background-color: white;
+}
+
+.table-responsive-wrapper table {
+  min-width: 520px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* =====================
+   TABLE RESPONSIVE WRAPPER (Mobile enhancement)
+===================== */
+@media (max-width: 640px) {
+  .table-responsive-wrapper {
+    border-radius: 14px;
+    /* Scroll shadow hint on both sides */
+    background:
+      linear-gradient(to right, white 30%, rgba(255,255,255,0)),
+      linear-gradient(to right, rgba(255,255,255,0), white 70%) 0 100%,
+      radial-gradient(farthest-side at 0% 50%, rgba(0,0,0,0.08), rgba(0,0,0,0)) 0 50%,
+      radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.08), rgba(0,0,0,0)) 100% 50%;
+    background-repeat: no-repeat;
+    background-color: white;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+
+  .table-responsive-wrapper table th,
+  .table-responsive-wrapper table td {
+    white-space: nowrap;
+    padding: 0.7rem 1rem !important;
+    font-size: 0.82rem;
+  }
+}
+
 /* Sidebar Responsive Hamburger Toggle for Mobile */
 .mobile-header {
   display: none;
@@ -795,7 +838,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   position: sticky;
   top: 0;
-  z-index: 101;
+  z-index: 102;
   box-shadow: var(--shadow-md);
 }
 
