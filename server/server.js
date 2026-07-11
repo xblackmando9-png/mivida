@@ -22,18 +22,9 @@ app.use(express.urlencoded({ extended: true }));
 // Note: File uploads are now handled by Cloudinary (see config/cloudinary.js)
 
 // Middleware to check database connection status
-const checkDbConnection = (req, res, next) => {
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ 
-      message: 'قاعدة البيانات غير متصلة حالياً. يرجى إعداد رابط اتصال MongoDB Atlas في ملف .env بالخلفية.' 
-    });
-  }
-  next();
-};
-
-// API Routes (checking db connection before routing)
-app.use('/api/residents', checkDbConnection, residentRoutes);
-app.use('/api/parcels', checkDbConnection, parcelRoutes);
+// API Routes
+app.use('/api/residents', residentRoutes);
+app.use('/api/parcels', parcelRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
