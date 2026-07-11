@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Plus, Trash, ArrowRight, ArrowLeft } from 'lucide-react';
 import Swal from 'sweetalert2';
 
-function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
+function ResidentForm({ onClose, onSave, isSaving, residentToEdit, parcelsList: propParcelsList = [] }) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState(residentToEdit ? residentToEdit.name : '');
   const [apartmentNumber, setApartmentNumber] = useState(residentToEdit ? residentToEdit.apartmentNumber : '');
@@ -10,9 +10,15 @@ function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
   const [childInput, setChildInput] = useState('');
   const [children, setChildren] = useState(residentToEdit ? (residentToEdit.children || []) : []);
   const [parcel, setParcel] = useState(residentToEdit ? (residentToEdit.parcel || '') : '');
-  const [parcelsList, setParcelsList] = useState([]);
+  const [parcelsList, setParcelsList] = useState(propParcelsList);
 
   useEffect(() => {
+    // If prop list is populated, use it directly — no need to fetch
+    if (propParcelsList && propParcelsList.length > 0) {
+      setParcelsList(propParcelsList);
+      return;
+    }
+    // Fallback: fetch independently (e.g. if prop wasn't passed)
     const getParcels = async () => {
       try {
         const res = await fetch('/api/parcels');
@@ -21,11 +27,11 @@ function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
           setParcelsList(data);
         }
       } catch(e) {
-        console.error(e);
+        console.error('Failed to fetch parcels:', e);
       }
     };
     getParcels();
-  }, []);
+  }, [propParcelsList]);
   
   // File states
   const [personalPhoto, setPersonalPhoto] = useState(null);

@@ -741,6 +741,7 @@ function App() {
           onSave={handleSaveResident}
           isSaving={isSaving}
           residentToEdit={editingResident}
+          parcelsList={parcels}
         />
       )}
       {/* Add Parcel Modal */}
