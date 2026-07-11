@@ -195,11 +195,19 @@ function App() {
         setEditingResident(null);
         fetchResidents(); // Refresh list
       } else {
-        const errorData = await res.json();
-        showToast(errorData.message || 'حدث خطأ أثناء الحفظ', 'error');
+        let errMsg = 'حدث خطأ أثناء الحفظ';
+        try {
+          const errorData = await res.json();
+          errMsg = errorData.message || errMsg;
+        } catch (jsonErr) {
+          const rawText = await res.text().catch(() => '');
+          console.error('Non-JSON server response:', rawText);
+          errMsg = `خطأ من السيرفر (${res.status})`;
+        }
+        showToast(errMsg, 'error');
       }
     } catch (err) {
-      console.error(err);
+      console.error('Network or fetch error:', err);
       showToast('خطأ في الاتصال بالشبكة', 'error');
     } finally {
       setIsSaving(false);
