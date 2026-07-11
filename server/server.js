@@ -58,6 +58,15 @@ app.listen(PORT, () => {
   console.log(`السيرفر يعمل الآن على المنفذ: http://localhost:${PORT}`);
 });
 
+// Global error handling middleware for JSON error responses
+app.use((err, req, res, next) => {
+  console.error('Global Error Handler:', err);
+  res.status(500).json({
+    message: err.message || 'حدث خطأ داخلي في السيرفر',
+    error: process.env.NODE_ENV === 'production' ? err.message : err.stack
+  });
+});
+
 module.exports = app;
 
 
