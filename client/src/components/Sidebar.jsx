@@ -1,12 +1,11 @@
 import React from 'react';
-import { LayoutDashboard, Users, Car, Settings, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Users, Car, Map, LogOut, X } from 'lucide-react';
 
 function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }) {
   const menuItems = [
-    { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
     { id: 'residents', label: 'إدارة السكان', icon: Users },
     { id: 'cars', label: 'إدارة السيارات', icon: Car },
-    { id: 'settings', label: 'الإعدادات', icon: Settings },
+    { id: 'parcels', label: 'البارسيل', icon: Map },
   ];
 
   return (
@@ -33,8 +32,8 @@ function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }) {
             </div>
             <span className="sidebar-logo-text">ميفيدا Hegazy</span>
           </div>
-          {/* Close button for mobile */}
-          <button className="sidebar-toggle-btn" style={{ display: 'none' }} onClick={() => setIsOpen(false)}>
+          {/* Close button - visible on mobile only */}
+          <button className="sidebar-toggle-btn sidebar-close-btn" onClick={() => setIsOpen(false)}>
             <X size={20} />
           </button>
         </div>

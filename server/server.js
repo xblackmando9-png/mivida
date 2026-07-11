@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 const residentRoutes = require('./routes/residentRoutes');
+const parcelRoutes = require('./routes/parcelRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -18,12 +19,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve Uploads static folder
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-app.use('/uploads', express.static(uploadDir));
+// Note: File uploads are now handled by Cloudinary (see config/cloudinary.js)
 
 // Middleware to check database connection status
 const checkDbConnection = (req, res, next) => {
@@ -37,6 +33,7 @@ const checkDbConnection = (req, res, next) => {
 
 // API Routes (checking db connection before routing)
 app.use('/api/residents', checkDbConnection, residentRoutes);
+app.use('/api/parcels', checkDbConnection, parcelRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

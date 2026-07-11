@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Plus, Trash } from 'lucide-react';
 
 function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
@@ -7,6 +7,23 @@ function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
   const [carNumber, setCarNumber] = useState(residentToEdit ? residentToEdit.carNumber : '');
   const [childInput, setChildInput] = useState('');
   const [children, setChildren] = useState(residentToEdit ? (residentToEdit.children || []) : []);
+  const [parcel, setParcel] = useState(residentToEdit ? (residentToEdit.parcel || '') : '');
+  const [parcelsList, setParcelsList] = useState([]);
+
+  useEffect(() => {
+    const getParcels = async () => {
+      try {
+        const res = await fetch('/api/parcels');
+        if (res.ok) {
+          const data = await res.json();
+          setParcelsList(data);
+        }
+      } catch(e) {
+        console.error(e);
+      }
+    };
+    getParcels();
+  }, []);
   
   // File states
   const [personalPhoto, setPersonalPhoto] = useState(null);
@@ -62,6 +79,7 @@ function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
     formData.append('name', name);
     formData.append('apartmentNumber', apartmentNumber);
     formData.append('carNumber', carNumber);
+    formData.append('parcel', parcel);
     formData.append('children', JSON.stringify(children));
     
     if (personalPhoto) {
@@ -109,6 +127,21 @@ function ResidentForm({ onClose, onSave, isSaving, residentToEdit }) {
                 required
               />
             </div>
+          </div>
+
+          {/* Row 1.5: Parcel Selection */}
+          <div className="form-group">
+            <label className="form-label">البارسيل (المنطقة)</label>
+            <select 
+              className="form-control" 
+              value={parcel} 
+              onChange={(e) => setParcel(e.target.value)}
+            >
+              <option value="">-- اختر البارسيل (اختياري) --</option>
+              {parcelsList.map(p => (
+                <option key={p._id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Row 2: Car Number */}

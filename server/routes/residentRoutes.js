@@ -1,51 +1,48 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const Resident = require('../models/Resident');
+const { cloudinary, uploadFields } = require('../config/cloudinary');
 
-// Ensure uploads folder exists
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Helper: extract Cloudinary public_id from secure_url for deletion
+const getPublicId = (url) => {
+  if (!url || !url.includes('cloudinary.com')) return null;
+  // URL format: https://res.cloudinary.com/<cloud>/image/upload/v<version>/<folder>/<public_id>.<ext>
+  const parts = url.split('/');
+  const uploadIndex = parts.indexOf('upload');
+  if (uploadIndex === -1) return null;
+  // Take everything after 'upload/v<version>/' or 'upload/'
+  const afterUpload = parts.slice(uploadIndex + 1);
+  // Remove version segment if exists (starts with 'v' followed by numbers)
+  if (/^v\d+$/.test(afterUpload[0])) afterUpload.shift();
+  // Remove extension
+  const withoutExt = afterUpload.join('/').replace(/\.[^.]+$/, '');
+  return withoutExt;
+};
 
-// Configure Storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// File Filter for Images
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp|gif/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
-
-  if (extname && mimetype) {
-    return cb(null, true);
-  } else {
-    cb(new Error('عذراً، يُسمح فقط برفع ملفات الصور!'));
+// Helper: delete image from Cloudinary
+const deleteFromCloudinary = async (url) => {
+  const publicId = getPublicId(url);
+  if (publicId) {
+    try {
+      await cloudinary.uploader.destroy(publicId);
+    } catch (e) {
+      console.error('Failed to delete from Cloudinary:', e.message);
+    }
   }
 };
 
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
-});
-
-// Upload fields config
-const uploadFields = upload.fields([
-  { name: 'personalPhoto', maxCount: 1 },
-  { name: 'carPhoto', maxCount: 1 }
-]);
+// Helper: parse children field
+const parseChildren = (children) => {
+  if (!children) return [];
+  try {
+    return JSON.parse(children);
+  } catch (e) {
+    if (typeof children === 'string') {
+      return children.split(',').map(c => c.trim()).filter(Boolean);
+    }
+    return Array.isArray(children) ? children : [];
+  }
+};
 
 // @route   GET /api/residents
 // @desc    Get all residents
@@ -63,36 +60,24 @@ router.get('/', async (req, res) => {
 // @desc    Add a new resident
 router.post('/', uploadFields, async (req, res) => {
   try {
-    const { name, apartmentNumber, carNumber, children } = req.body;
+    const { name, apartmentNumber, carNumber, children, parcel } = req.body;
 
     if (!name || !apartmentNumber) {
       return res.status(400).json({ message: 'الاسم ورقم الشقة حقول مطلوبة' });
     }
 
-    // Parse children if passed as string (e.g., JSON stringified or comma-separated)
-    let parsedChildren = [];
-    if (children) {
-      try {
-        parsedChildren = JSON.parse(children);
-      } catch (e) {
-        if (typeof children === 'string') {
-          parsedChildren = children.split(',').map(c => c.trim()).filter(Boolean);
-        } else if (Array.isArray(children)) {
-          parsedChildren = children;
-        }
-      }
-    }
+    const parsedChildren = parseChildren(children);
 
-    // Get file paths
+    // Get Cloudinary URLs (multer-storage-cloudinary puts url in .path)
     let personalPhoto = '';
     let carPhoto = '';
 
     if (req.files) {
       if (req.files.personalPhoto && req.files.personalPhoto[0]) {
-        personalPhoto = `/uploads/${req.files.personalPhoto[0].filename}`;
+        personalPhoto = req.files.personalPhoto[0].path;
       }
       if (req.files.carPhoto && req.files.carPhoto[0]) {
-        carPhoto = `/uploads/${req.files.carPhoto[0].filename}`;
+        carPhoto = req.files.carPhoto[0].path;
       }
     }
 
@@ -101,6 +86,7 @@ router.post('/', uploadFields, async (req, res) => {
       apartmentNumber,
       carNumber: carNumber || '',
       children: parsedChildren,
+      parcel: parcel || '',
       personalPhoto,
       carPhoto
     });
@@ -114,7 +100,7 @@ router.post('/', uploadFields, async (req, res) => {
 });
 
 // @route   DELETE /api/residents/:id
-// @desc    Delete a resident
+// @desc    Delete a resident and their Cloudinary photos
 router.delete('/:id', async (req, res) => {
   try {
     const resident = await Resident.findById(req.params.id);
@@ -122,18 +108,9 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'الساكن غير موجود' });
     }
 
-    // Delete associated photos from disk
-    const deleteFile = (filePath) => {
-      if (filePath) {
-        const fullPath = path.join(__dirname, '..', filePath);
-        if (fs.existsSync(fullPath)) {
-          fs.unlinkSync(fullPath);
-        }
-      }
-    };
-
-    deleteFile(resident.personalPhoto);
-    deleteFile(resident.carPhoto);
+    // Delete photos from Cloudinary
+    await deleteFromCloudinary(resident.personalPhoto);
+    await deleteFromCloudinary(resident.carPhoto);
 
     await Resident.findByIdAndDelete(req.params.id);
     res.json({ message: 'تم حذف الساكن وصوره بنجاح' });
@@ -152,53 +129,30 @@ router.put('/:id', uploadFields, async (req, res) => {
       return res.status(404).json({ message: 'الساكن غير موجود' });
     }
 
-    const { name, apartmentNumber, carNumber, children } = req.body;
+    const { name, apartmentNumber, carNumber, children, parcel } = req.body;
 
     if (!name || !apartmentNumber) {
       return res.status(400).json({ message: 'الاسم ورقم الشقة حقول مطلوبة' });
     }
 
-    // Parse children
-    let parsedChildren = [];
-    if (children) {
-      try {
-        parsedChildren = JSON.parse(children);
-      } catch (e) {
-        if (typeof children === 'string') {
-          parsedChildren = children.split(',').map(c => c.trim()).filter(Boolean);
-        } else if (Array.isArray(children)) {
-          parsedChildren = children;
-        }
-      }
-    }
-
-    // Helper to delete old file
-    const deleteFile = (filePath) => {
-      if (filePath) {
-        const fullPath = path.join(__dirname, '..', filePath);
-        if (fs.existsSync(fullPath)) {
-          fs.unlinkSync(fullPath);
-        }
-      }
-    };
+    const parsedChildren = parseChildren(children);
 
     // Update text fields
     resident.name = name;
     resident.apartmentNumber = apartmentNumber;
     resident.carNumber = carNumber || '';
+    resident.parcel = parcel || '';
     resident.children = parsedChildren;
 
-    // Handle new file uploads
+    // Handle new file uploads - delete old from Cloudinary then save new URL
     if (req.files) {
       if (req.files.personalPhoto && req.files.personalPhoto[0]) {
-        // Delete old personal photo if exists
-        deleteFile(resident.personalPhoto);
-        resident.personalPhoto = `/uploads/${req.files.personalPhoto[0].filename}`;
+        await deleteFromCloudinary(resident.personalPhoto);
+        resident.personalPhoto = req.files.personalPhoto[0].path;
       }
       if (req.files.carPhoto && req.files.carPhoto[0]) {
-        // Delete old car photo if exists
-        deleteFile(resident.carPhoto);
-        resident.carPhoto = `/uploads/${req.files.carPhoto[0].filename}`;
+        await deleteFromCloudinary(resident.carPhoto);
+        resident.carPhoto = req.files.carPhoto[0].path;
       }
     }
 

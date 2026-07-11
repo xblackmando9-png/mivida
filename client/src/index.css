@@ -227,7 +227,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .modal-content {
   background-color: var(--card-bg);
-  width: 100%;
+  width: calc(100% - 2rem);
   max-width: 600px;
   border-radius: 24px;
   box-shadow: var(--shadow-lg);
@@ -793,15 +793,23 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow-md);
 }
 
+/* Close button hidden on desktop, visible on mobile */
+.sidebar-close-btn {
+  display: none;
+}
+
 @media (max-width: 992px) {
   .mobile-header {
     display: flex;
   }
   .sidebar {
-    transform: translateX(100%); /* Hide sidebar on mobile */
+    transform: translateX(100%);
   }
   .sidebar.open {
-    transform: translateX(0); /* Show sidebar on mobile */
+    transform: translateX(0);
+  }
+  .sidebar-close-btn {
+    display: flex;
   }
 }
 
@@ -813,4 +821,246 @@ h1, h2, h3, h4, h5, h6 {
   margin-right: 0;
 }
 
+/* =====================
+   TABLET (max 992px)
+===================== */
+@media (max-width: 992px) {
+  .app-container {
+    flex-direction: column;
+  }
 
+  .desktop-toggle-btn {
+    display: none !important;
+  }
+
+  .main-content {
+    margin-right: 0;
+    padding: 1.25rem;
+  }
+
+  .top-header {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    gap: 0.5rem;
+  }
+
+  .top-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .user-profile-info {
+    display: none;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .section-header > div:last-child {
+    width: 100%;
+  }
+
+  .section-header > div[style] {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .residents-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    max-height: 95vh;
+    border-radius: 16px;
+  }
+
+  .modal-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+  }
+
+  .modal-footer {
+    padding: 1rem 1.25rem;
+  }
+
+  table {
+    font-size: 0.8rem;
+  }
+
+  table th,
+  table td {
+    padding: 0.75rem 0.75rem !important;
+  }
+}
+
+/* =====================
+   MOBILE (max 640px)
+===================== */
+@media (max-width: 640px) {
+  .main-content {
+    padding: 1rem;
+  }
+
+  .top-header {
+    padding: 0.6rem 0.75rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .top-header h2 {
+    font-size: 0.95rem;
+  }
+
+  .top-header p {
+    display: none;
+  }
+
+  .user-profile img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .section-header h3 {
+    font-size: 1rem;
+  }
+
+  /* Search + Add button stack vertically */
+  .section-header > div[style] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.6rem !important;
+  }
+
+  /* Search box takes full width */
+  .section-header > div[style] > div[style] {
+    width: 100% !important;
+  }
+
+  .section-header input.form-control {
+    width: 100% !important;
+  }
+
+  .section-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Resident cards: single column */
+  .residents-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .resident-card-header {
+    height: 55px;
+  }
+
+  .resident-card-body {
+    padding: 32px 12px 12px 12px;
+  }
+
+  .resident-name {
+    font-size: 0.95rem;
+  }
+
+  .car-photo-preview-card {
+    height: 80px;
+  }
+
+  /* Modal fills screen on mobile */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+  }
+
+  .file-upload-container {
+    flex-direction: column;
+  }
+
+  /* Cars table: make scrollable */
+  .main-content > div > div[style*='border-radius: 16px'] {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 480px;
+  }
+
+  .toast-container {
+    bottom: 16px;
+    left: 12px;
+    right: 12px;
+  }
+
+  .toast {
+    width: 100%;
+  }
+
+  /* Sidebar overlay backdrop on mobile */
+  .sidebar {
+    width: 260px;
+  }
+}
+
+/* =====================
+   SMALL MOBILE (max 380px)
+===================== */
+@media (max-width: 380px) {
+  .main-content {
+    padding: 0.75rem;
+  }
+
+  .top-header h2 {
+    font-size: 0.85rem;
+  }
+
+  .btn {
+    font-size: 0.82rem;
+    padding: 0.5rem 0.9rem;
+  }
+
+  .resident-name {
+    font-size: 0.88rem;
+  }
+
+  .detail-item {
+    font-size: 0.72rem;
+  }
+
+  .sidebar {
+    width: 240px;
+  }
+
+  .form-control {
+    font-size: 0.85rem;
+  }
+}

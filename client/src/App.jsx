@@ -17,18 +17,24 @@ import {
   Search,
   Pencil
 } from 'lucide-react';
+import Swal from 'sweetalert2';
+import * as XLSX from 'xlsx';
 
 function App() {
   const [activeTab, setActiveTab] = useState('residents');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [carSearchQuery, setCarSearchQuery] = useState('');
   const [residents, setResidents] = useState([]);
+  const [parcels, setParcels] = useState([]);
   const [editingResident, setEditingResident] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isParcelModalOpen, setIsParcelModalOpen] = useState(false);
+  const [newParcelName, setNewParcelName] = useState('');
+  const [selectedParcel, setSelectedParcel] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [toasts, setToasts] = useState([]);
 
   // Filter residents based on search query
   const filteredResidents = residents.filter((resident) => {
@@ -60,17 +66,86 @@ function App() {
     }
   };
 
+  // Load parcels from API
+  const fetchParcels = async () => {
+    try {
+      const res = await fetch('/api/parcels');
+      if (res.ok) {
+        const data = await res.json();
+        setParcels(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchResidents();
+    fetchParcels();
   }, []);
 
-  // Show dynamic toast notifications
+  const handleSaveParcel = async () => {
+    if (!newParcelName.trim()) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/parcels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newParcelName.trim() })
+      });
+      if (res.ok) {
+        showToast('تم حفظ البارسيل بنجاح');
+        setNewParcelName('');
+        setIsParcelModalOpen(false);
+        fetchParcels();
+      } else {
+        const errData = await res.json();
+        showToast(errData.message || 'فشل الحفظ', 'error');
+      }
+    } catch (err) {
+      showToast('خطأ بالاتصال', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Show dynamic toast notifications using SweetAlert2
   const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: type,
+      title: message,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.onmouseenter = Swal.stopTimer;
+        toast.onmouseleave = Swal.resumeTimer;
+      }
+    });
+  };
+
+  const exportParcelToExcel = (parcel) => {
+    const parcelResidents = residents.filter(r => r.parcel === parcel.name);
+    if (parcelResidents.length === 0) {
+      showToast('لا يوجد سكان مسجلين في هذا البارسيل لتصديرهم', 'error');
+      return;
+    }
+
+    const dataToExport = parcelResidents.map((r, index) => ({
+      'م': index + 1,
+      'الاسم': r.name,
+      'رقم الشقة': r.apartmentNumber,
+      'رقم السيارة': r.carNumber || 'لا يوجد',
+      'الأولاد': r.children.join(', ') || 'لا يوجد'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, parcel.name.slice(0, 31)); // sheet names must be <= 31 chars
+
+    XLSX.writeFile(workbook, `سكان_${parcel.name.replace(/\s+/g, '_')}.xlsx`);
   };
 
   // Add or update resident
@@ -105,7 +180,18 @@ function App() {
 
   // Delete a resident
   const handleDeleteResident = async (id) => {
-    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا الساكن بالكامل؟')) {
+    const result = await Swal.fire({
+      title: 'هل أنت متأكد؟',
+      text: "لن تتمكن من التراجع عن الحذف!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'نعم، احذف الساكن',
+      cancelButtonText: 'إلغاء'
+    });
+
+    if (!result.isConfirmed) {
       return;
     }
 
@@ -153,40 +239,24 @@ function App() {
       {/* Main Content Area */}
       <main className="main-content">
         
-        {/* Top Header Row matching the design */}
-        <div className="top-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '40px',
-                height: '40px'
-              }}
-              title={isSidebarCollapsed ? "إظهار القائمة" : "إخفاء القائمة"}
-            >
-              <Menu size={20} />
-            </button>
-            <div>
-              <h2 style={{ fontSize: '1.4rem' }}>بوابة إدارة الكومباوند</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>لوحة التحكم السريعة للمسؤولين</p>
-            </div>
-          </div>
-          <div className="user-profile">
-            <div className="user-profile-info" style={{ textAlign: 'left' }}>
-              <span className="name">Hegazy Admin</span>
-              <span className="role">مدير الكومباوند</span>
-            </div>
-            <img 
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" 
-              alt="Hegazy Admin" 
-            />
-          </div>
+        {/* Top Desktop Menu Button */}
+        <div className="desktop-toggle-btn" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '0.5rem' }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            style={{
+              padding: '0.5rem',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px'
+            }}
+            title={isSidebarCollapsed ? "إظهار القائمة" : "إخفاء القائمة"}
+          >
+            <Menu size={20} />
+          </button>
         </div>
 
         {/* Dynamic Page Rendering based on activeTab */}
@@ -294,7 +364,7 @@ function App() {
                       <h4 className="resident-name">{resident.name}</h4>
                       <div className="apartment-info">
                         <Home size={14} />
-                        <span>شقة رقم: {resident.apartmentNumber}</span>
+                        <span>شقة رقم: {resident.apartmentNumber} {resident.parcel ? `( ${resident.parcel} )` : ''}</span>
                       </div>
 
                       <div className="resident-details-list">
@@ -344,44 +414,26 @@ function App() {
           </>
         )}
 
-        {/* Dashboard Tab Content */}
-        {activeTab === 'dashboard' && (
-          <div style={{ padding: '2rem 0' }}>
-            <h3 style={{ marginBottom: '1.5rem' }}>مرحباً بك في لوحة التحكم الإحصائية</h3>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-icon" style={{ backgroundColor: '#e0e7ff', color: '#4f46e5' }}>
-                  <Shield size={24} />
-                </div>
-                <div className="stat-info">
-                  <span className="value">نشط</span>
-                  <span className="label">بوابة الأمن الإلكترونية</span>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon" style={{ backgroundColor: '#d1fae5', color: '#059669' }}>
-                  <Info size={24} />
-                </div>
-                <div className="stat-info">
-                  <span className="value">100%</span>
-                  <span className="label">استقرار الاتصال بالسيرفر</span>
-                </div>
-              </div>
-            </div>
-            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border-color)', marginTop: '1rem' }}>
-              <h4>نظام إدارة سكان كومباوند ميفيدا</h4>
-              <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem', lineHeight: '1.6' }}>
-                يوفر هذا النظام للمسؤولين إمكانية تسجيل بيانات جميع السكان القاطنين، بالإضافة إلى أرقام لوحات سياراتهم وصور المركبات لضمان التعرف السريع عليها عند بوابات الدخول والخروج. كما يتيح النظام حصر العائلات وعدد الأطفال لكل ساكن لتسهيل تقديم الخدمات الاجتماعية والأمنية.
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Cars Tab Content */}
         {activeTab === 'cars' && (
           <div style={{ padding: '2rem 0' }}>
-            <h3 style={{ marginBottom: '1rem' }}>قائمة المركبات المصرح لها</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>البحث وعرض السيارات المعتمدة داخل الكومباوند</p>
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h3 style={{ marginBottom: '0.5rem' }}>قائمة المركبات المصرح لها</h3>
+                <p style={{ color: 'var(--text-muted)' }}>البحث وعرض السيارات المعتمدة داخل الكومباوند</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: 'white', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', width: '300px' }}>
+                <Search size={18} color="var(--text-muted)" />
+                <input 
+                  type="text" 
+                  placeholder="ابحث برقم السيارة أو الاسم..." 
+                  style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', fontSize: '0.9rem' }}
+                  value={carSearchQuery}
+                  onChange={(e) => setCarSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
             
             <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
@@ -394,7 +446,14 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {residents.filter(r => r.carNumber).map((resident) => (
+                  {residents.filter(r => r.carNumber).filter(r => {
+                    const q = carSearchQuery.toLowerCase().trim();
+                    if (!q) return true;
+                    return (
+                      r.name.toLowerCase().includes(q) ||
+                      r.carNumber.toLowerCase().includes(q)
+                    );
+                  }).map((resident) => (
                     <tr key={resident._id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                       <td style={{ padding: '1.2rem 1.5rem', fontWeight: '700' }}>{resident.name}</td>
                       <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-muted)' }}>{resident.apartmentNumber}</td>
@@ -416,9 +475,13 @@ function App() {
                       </td>
                     </tr>
                   ))}
-                  {residents.filter(r => r.carNumber).length === 0 && (
+                  {residents.filter(r => r.carNumber).filter(r => {
+                    const q = carSearchQuery.toLowerCase().trim();
+                    if (!q) return true;
+                    return r.name.toLowerCase().includes(q) || r.carNumber.toLowerCase().includes(q);
+                  }).length === 0 && (
                     <tr>
-                      <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>لا توجد سيارات مسجلة حالياً</td>
+                      <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>لا توجد سيارات مسجلة أو مطابقة للبحث</td>
                     </tr>
                   )}
                 </tbody>
@@ -427,23 +490,98 @@ function App() {
           </div>
         )}
 
-        {/* Settings Tab Content */}
-        {activeTab === 'settings' && (
+        {/* Parcels Tab Content */}
+        {activeTab === 'parcels' && (
           <div style={{ padding: '2rem 0' }}>
-            <h3 style={{ marginBottom: '1.5rem' }}>إعدادات النظام</h3>
-            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-              <div className="form-group">
-                <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem' }}>عنوان النظام</label>
-                <input type="text" className="form-control" defaultValue="ميفيدا - لوحة تحكم الكومباوند" disabled />
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h3>إدارة البارسيل (Parcels)</h3>
+                <p style={{ color: 'var(--text-muted)' }}>إدارة وتقسيم الكومباوند إلى مناطق (بارسيل)</p>
               </div>
-              <div className="form-group">
-                <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem' }}>لغة العرض الافتراضية</label>
-                <input type="text" className="form-control" defaultValue="العربية (RTL)" disabled />
-              </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '1.5rem' }}>
-                ملاحظة: بعض الإعدادات مقفلة حالياً لأسباب أمنية.
-              </p>
+              
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
+                  setNewParcelName('');
+                  setIsParcelModalOpen(true);
+                }}
+              >
+                <Plus size={18} />
+                إضافة بارسيل جديد
+              </button>
             </div>
+
+            {selectedParcel ? (
+              <div style={{ backgroundColor: 'var(--card-bg)', borderRadius: '16px', padding: '2rem', border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button className="btn btn-secondary" onClick={() => setSelectedParcel(null)}>
+                      رجوع للقائمة
+                    </button>
+                    <h3 style={{ margin: 0 }}>سكان بارسيل: {selectedParcel.name}</h3>
+                  </div>
+                  <button 
+                    className="btn" 
+                    style={{ backgroundColor: '#10b981', color: 'white' }}
+                    onClick={() => exportParcelToExcel(selectedParcel)}
+                  >
+                    تصدير Excel
+                  </button>
+                </div>
+                
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
+                      <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>الاسم</th>
+                      <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>رقم الشقة</th>
+                      <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>رقم السيارة</th>
+                      <th style={{ padding: '1.2rem 1.5rem', fontSize: '0.85rem' }}>الأولاد</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {residents.filter(r => r.parcel === selectedParcel.name).map((resident) => (
+                      <tr key={resident._id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '1.2rem 1.5rem', fontWeight: '700' }}>{resident.name}</td>
+                        <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-muted)' }}>{resident.apartmentNumber}</td>
+                        <td style={{ padding: '1.2rem 1.5rem' }}>{resident.carNumber || '-'}</td>
+                        <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-muted)' }}>{resident.children?.join(', ') || '-'}</td>
+                      </tr>
+                    ))}
+                    {residents.filter(r => r.parcel === selectedParcel.name).length === 0 && (
+                      <tr>
+                        <td colSpan="4" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>لا يوجد سكان في هذا البارسيل حالياً</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="residents-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                {parcels.map((parcel) => (
+                  <div 
+                    key={parcel._id} 
+                    className="stat-card" 
+                    style={{ cursor: 'pointer', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem' }}
+                    onClick={() => setSelectedParcel(parcel)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                      <div className="stat-icon" style={{ backgroundColor: '#fef3c7', color: '#d97706', width: '40px', height: '40px' }}>
+                        <Home size={20} />
+                      </div>
+                      <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{parcel.name}</h3>
+                    </div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
+                      عدد السكان: {residents.filter(r => r.parcel === parcel.name).length}
+                    </p>
+                  </div>
+                ))}
+                {parcels.length === 0 && (
+                  <div className="empty-state">
+                    <p>لا توجد مناطق بارسيل مضافة حتى الآن</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -460,23 +598,47 @@ function App() {
           residentToEdit={editingResident}
         />
       )}
-
-      {/* Toast Notification Container */}
-      <div className="toast-container">
-        {toasts.map((toast) => (
-          <div 
-            key={toast.id} 
-            className={`toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`}
-          >
-            {toast.type === 'error' ? (
-              <AlertTriangle size={18} />
-            ) : (
-              <CheckCircle2 size={18} />
-            )}
-            <span>{toast.message}</span>
+      {/* Add Parcel Modal */}
+      {isParcelModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsParcelModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>إضافة بارسيل جديد</h3>
+              <button className="modal-close" onClick={() => setIsParcelModalOpen(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">اسم البارسيل</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={newParcelName} 
+                  onChange={(e) => setNewParcelName(e.target.value)} 
+                  placeholder="مثال: بارسيل 1"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="modal-footer" style={{ padding: '1.5rem 2rem', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setIsParcelModalOpen(false)}
+                disabled={isSaving}
+              >
+                إلغاء
+              </button>
+              <button 
+                className="btn" 
+                style={{ backgroundColor: '#10b981', color: 'white' }}
+                onClick={handleSaveParcel}
+                disabled={isSaving || !newParcelName.trim()}
+              >
+                {isSaving ? 'جاري الحفظ...' : 'حفظ البارسيل'}
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

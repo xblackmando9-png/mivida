@@ -20,6 +20,10 @@ const residentSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
+  parcel: {
+    type: String,
+    default: ''
+  },
   personalPhoto: {
     type: String,
     default: ''
